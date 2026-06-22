@@ -8,6 +8,7 @@ import {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  refreshTokenSchema,
 } from '../validators/auth.validator';
 
 const router = Router();
@@ -78,6 +79,74 @@ router.post(
   authLimiter,
   validate(loginSchema, 'body'),
   authController.login
+);
+
+/**
+ * @openapi
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Refresh access token using a refresh token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: 'Token refreshed successfully' }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     accessToken: { type: string }
+ *                     refreshToken: { type: string }
+ *       401:
+ *         $ref: '#/components/schemas/ErrorResponse'
+ */
+router.post(
+  '/refresh',
+  authLimiter,
+  validate(refreshTokenSchema, 'body'),
+  authController.refresh
+);
+
+/**
+ * @openapi
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout and invalidate refresh token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ *       400:
+ *         $ref: '#/components/schemas/ErrorResponse'
+ */
+router.post(
+  '/logout',
+  authLimiter,
+  validate(refreshTokenSchema, 'body'),
+  authController.logout
 );
 
 /**

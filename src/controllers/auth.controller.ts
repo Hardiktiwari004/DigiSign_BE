@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service';
 import { sendSuccess } from '../utils/apiResponse.util';
-import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto } from '../validators/auth.validator';
+import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto, RefreshTokenDto } from '../validators/auth.validator';
 
 /**
  * Auth Controller — thin layer between HTTP and auth service.
@@ -92,6 +92,40 @@ export const authController = {
       await authService.resetPassword(dto, ctx);
 
       sendSuccess(res, 'Password reset successfully. Please login with your new password.');
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * POST /api/auth/refresh
+   * Generates a new access token and refresh token using refresh token rotation.
+   */
+  refresh: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const dto = req.body as RefreshTokenDto;
+      const ctx = { ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+
+      const result = await authService.refresh(dto.refreshToken, ctx);
+
+      sendSuccess(res, 'Token refreshed successfully', result);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * POST /api/auth/logout
+   * Invalidates the provided refresh token.
+   */
+  logout: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const dto = req.body as RefreshTokenDto;
+      const ctx = { ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+
+      await authService.logout(dto.refreshToken, ctx);
+
+      sendSuccess(res, 'Logged out successfully');
     } catch (error) {
       next(error);
     }

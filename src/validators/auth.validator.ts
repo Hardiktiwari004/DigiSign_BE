@@ -47,3 +47,10 @@ export const resetPasswordSchema = z.object({
 });
 
 export type ResetPasswordDto = z.infer<typeof resetPasswordSchema>;
+
+// ── Refresh Token Validator ───────────────────────────────────────────────────
+export const refreshTokenSchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+
+export type RefreshTokenDto = z.infer<typeof refreshTokenSchema>;

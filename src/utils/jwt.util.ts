@@ -11,12 +11,12 @@ export interface JwtPayload {
 }
 
 /**
- * Generates an HS256 JWT token for a user.
+ * Generates an HS256 Access Token (JWT) for a user.
  *
  * @param payload The user ID and Role
  * @returns A signed JWT string
  */
-export const generateJwtToken = (payload: JwtPayload): string => {
+export const generateAccessToken = (payload: JwtPayload): string => {
   return jwt.sign(payload, env.JWT_SECRET, {
     expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
     algorithm: 'HS256', // Explicitly define algorithm to prevent algorithm confusion attacks
@@ -24,12 +24,40 @@ export const generateJwtToken = (payload: JwtPayload): string => {
 };
 
 /**
- * Synchronously verifies and decodes a JWT token.
+ * Synchronously verifies and decodes an Access Token (JWT).
  * Throws JsonWebTokenError or TokenExpiredError on failure.
  *
  * @param token The raw JWT string
  * @returns The decoded JwtPayload
  */
-export const verifyJwtToken = (token: string): JwtPayload => {
+export const verifyAccessToken = (token: string): JwtPayload => {
   return jwt.verify(token, env.JWT_SECRET) as JwtPayload;
 };
+
+/**
+ * Generates an HS256 Refresh Token (JWT) for a user.
+ *
+ * @param payload The user ID and Role
+ * @returns A signed JWT string
+ */
+export const generateRefreshToken = (payload: JwtPayload): string => {
+  return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
+    expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+    algorithm: 'HS256',
+  });
+};
+
+/**
+ * Synchronously verifies and decodes a Refresh Token (JWT).
+ * Throws JsonWebTokenError or TokenExpiredError on failure.
+ *
+ * @param token The raw JWT string
+ * @returns The decoded JwtPayload
+ */
+export const verifyRefreshToken = (token: string): JwtPayload => {
+  return jwt.verify(token, env.JWT_REFRESH_SECRET) as JwtPayload;
+};
+
+// Aliases for backwards compatibility with the existing middleware/services
+export const generateJwtToken = generateAccessToken;
+export const verifyJwtToken = verifyAccessToken;

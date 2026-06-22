@@ -1,11 +1,30 @@
 import { User } from '../models/User.model';
 import { IUser } from '../interfaces/IUser';
 import { hashPassword, comparePassword } from '../utils/password.util';
-import { generateJwtToken } from '../utils/jwt.util';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.util';
+import { RefreshToken } from '../models/RefreshToken.model';
+import { env } from '../config/env';
 import { auditService } from './audit.service';
 import { AuditAction } from '../constants/auditActions';
 import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto } from '../validators/auth.validator';
 import { v4 as uuidv4 } from 'uuid';
+
+/**
+ * Parses time strings like '7d', '15m' to milliseconds.
+ */
+const parseExpiresIn = (val: string): number => {
+  const match = val.match(/^(\d+)([smhd])$/);
+  if (!match) return 7 * 24 * 60 * 60 * 1000;
+  const num = parseInt(match[1], 10);
+  const unit = match[2];
+  switch (unit) {
+    case 's': return num * 1000;
+    case 'm': return num * 60 * 1000;
+    case 'h': return num * 60 * 60 * 1000;
+    case 'd': return num * 24 * 60 * 60 * 1000;
+    default: return 7 * 24 * 60 * 60 * 1000;
+  }
+};
 
 /**
  * Auth context passed from controller to service for audit logging.
@@ -30,7 +49,7 @@ export const authService = {
   register: async (
     dto: RegisterDto,
     ctx: AuditContext
-  ): Promise<{ token: string; user: Partial<IUser> }> => {
+  ): Promise<{ accessToken: string; refreshToken: string; user: Partial<IUser> }> => {
     // Check for existing email
     const existingUser = await User.findOne({ email: dto.email });
     if (existingUser) {
@@ -48,7 +67,16 @@ export const authService = {
       passwordHash,
     });
 
-    const token = generateJwtToken({ id: user._id.toString(), role: user.role });
+    const accessToken = generateAccessToken({ id: user._id.toString(), role: user.role });
+    const refreshToken = generateRefreshToken({ id: user._id.toString(), role: user.role });
+
+    // Store refresh token in database
+    const expiresAt = new Date(Date.now() + parseExpiresIn(env.JWT_REFRESH_EXPIRES_IN));
+    await RefreshToken.create({
+      userId: user._id,
+      token: refreshToken,
+      expiresAt,
+    });
 
     // Audit log (non-blocking)
     await auditService.log({
@@ -60,7 +88,8 @@ export const authService = {
     });
 
     return {
-      token,
+      accessToken,
+      refreshToken,
       user: {
         _id: user._id,
         name: user.name,
@@ -80,7 +109,7 @@ export const authService = {
   login: async (
     dto: LoginDto,
     ctx: AuditContext
-  ): Promise<{ token: string; user: Partial<IUser> }> => {
+  ): Promise<{ accessToken: string; refreshToken: string; user: Partial<IUser> }> => {
     // passwordHash is excluded by default — must explicitly select it
     const user = await User.findOne({ email: dto.email }).select('+passwordHash');
 
@@ -97,7 +126,16 @@ export const authService = {
       throw err;
     }
 
-    const token = generateJwtToken({ id: user._id.toString(), role: user.role });
+    const accessToken = generateAccessToken({ id: user._id.toString(), role: user.role });
+    const refreshToken = generateRefreshToken({ id: user._id.toString(), role: user.role });
+
+    // Store refresh token in database
+    const expiresAt = new Date(Date.now() + parseExpiresIn(env.JWT_REFRESH_EXPIRES_IN));
+    await RefreshToken.create({
+      userId: user._id,
+      token: refreshToken,
+      expiresAt,
+    });
 
     await auditService.log({
       action: AuditAction.USER_LOGIN,
@@ -108,7 +146,8 @@ export const authService = {
     });
 
     return {
-      token,
+      accessToken,
+      refreshToken,
       user: {
         _id: user._id,
         name: user.name,
@@ -214,6 +253,86 @@ export const authService = {
       action: AuditAction.PASSWORD_RESET_COMPLETED,
       userId: user._id.toString(),
       metadata: { email: user.email },
+      ipAddress: ctx.ipAddress,
+      userAgent: ctx.userAgent,
+    });
+  },
+
+  /**
+   * Generates a new pair of access and refresh tokens using refresh token rotation.
+   * Invalidates the old refresh token by deleting it from the database.
+   */
+  refresh: async (
+    token: string,
+    ctx: AuditContext
+  ): Promise<{ accessToken: string; refreshToken: string }> => {
+    let decoded;
+    try {
+      decoded = verifyRefreshToken(token);
+    } catch (error) {
+      const err = new Error('Invalid or expired refresh token') as Error & { statusCode: number };
+      err.statusCode = 401;
+      throw err;
+    }
+
+    const dbToken = await RefreshToken.findOne({ token });
+    if (!dbToken) {
+      const err = new Error('Refresh token has been revoked or already used') as Error & { statusCode: number };
+      err.statusCode = 401;
+      throw err;
+    }
+
+    await RefreshToken.deleteOne({ _id: dbToken._id });
+
+    const userId = dbToken.userId.toString();
+    const user = await User.findById(userId);
+    if (!user) {
+      const err = new Error('User not found') as Error & { statusCode: number };
+      err.statusCode = 401;
+      throw err;
+    }
+
+    const newAccessToken = generateAccessToken({ id: userId, role: user.role });
+    const newRefreshToken = generateRefreshToken({ id: userId, role: user.role });
+
+    const expiresAt = new Date(Date.now() + parseExpiresIn(env.JWT_REFRESH_EXPIRES_IN));
+    await RefreshToken.create({
+      userId: user._id,
+      token: newRefreshToken,
+      expiresAt,
+    });
+
+    await auditService.log({
+      action: AuditAction.TOKEN_REFRESH,
+      userId: userId,
+      metadata: { email: user.email },
+      ipAddress: ctx.ipAddress,
+      userAgent: ctx.userAgent,
+    });
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
+  },
+
+  /**
+   * Invalidates a refresh token by deleting it from the database (logout).
+   */
+  logout: async (
+    token: string,
+    ctx: AuditContext
+  ): Promise<void> => {
+    const dbToken = await RefreshToken.findOne({ token });
+    if (!dbToken) {
+      return;
+    }
+
+    await RefreshToken.deleteOne({ _id: dbToken._id });
+
+    await auditService.log({
+      action: AuditAction.USER_LOGOUT,
+      userId: dbToken.userId.toString(),
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
     });
