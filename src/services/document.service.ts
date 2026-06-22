@@ -120,6 +120,52 @@ export const documentService = {
   },
 
   /**
+   * Retrieves a paginated list of all documents across the platform (admin only).
+   * Supports search by title/status and dynamic sorting.
+   */
+  getAllDocuments: async (query: GetDocumentsQuery): Promise<PaginatedDocuments> => {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const filter: FilterQuery<IDocument> = {};
+
+    if (query.search) {
+      // Case-insensitive regex search on title or verification code
+      filter.$or = [
+        { title: { $regex: query.search, $options: 'i' } },
+        { verificationCode: { $regex: query.search, $options: 'i' } },
+      ];
+    }
+
+    if (query.status) {
+      filter.status = query.status;
+    }
+
+    // Dynamic sorting (e.g. { uploadedAt: -1 })
+    const sortField = query.sortBy ?? 'uploadedAt';
+    const sortDirection = query.sortOrder === 'asc' ? 1 : -1;
+    const sort = { [sortField]: sortDirection };
+
+    const [items, total] = await Promise.all([
+      Document.find(filter)
+        .sort(sort as any)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Document.countDocuments(filter),
+    ]);
+
+    return {
+      items: items as unknown as IDocument[],
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  },
+
+  /**
    * Retrieves a single document by ID.
    * Enforces ownership authorization (owner or ADMIN).
    * Generates a DOCUMENT_VIEWED audit log.

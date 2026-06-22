@@ -40,7 +40,15 @@ export const signatureService = {
       throw err;
     }
 
-    if (document.ownerId.toString() !== userId) {
+    // Fetch user early to check role and get the signer's name for the PDF footer
+    const user = await User.findById(userId);
+    if (!user) {
+      const err = new Error('User not found') as Error & { statusCode: number };
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (document.ownerId.toString() !== userId && user.role !== 'ADMIN') {
       const err = new Error('You do not have permission to sign this document') as Error & { statusCode: number };
       err.statusCode = 403;
       throw err;
@@ -51,10 +59,6 @@ export const signatureService = {
       err.statusCode = 400;
       throw err;
     }
-
-    // Fetch user for the signer's name (used in the PDF footer)
-    const user = await User.findById(userId);
-    if (!user) throw new Error('User not found');
 
     // 2. Upload the raw signature image to Cloudinary (for record keeping)
     const signatureImageUrl = await uploadImageToCloudinary(dto.signatureImageBase64);

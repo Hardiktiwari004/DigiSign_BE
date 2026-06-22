@@ -65,6 +65,7 @@ export const authService = {
       name: dto.name,
       email: dto.email,
       passwordHash,
+      role: dto.role || 'USER',
     });
 
     const accessToken = generateAccessToken({ id: user._id.toString(), role: user.role });

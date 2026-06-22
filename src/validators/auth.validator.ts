@@ -20,6 +20,7 @@ export const registerSchema = z.object({
     .max(100, 'Name cannot exceed 100 characters'),
   email: z.string().trim().email('Invalid email address').toLowerCase(),
   password: passwordSchema,
+  role: z.enum(['USER', 'ADMIN']).optional(),
 });
 
 export type RegisterDto = z.infer<typeof registerSchema>;

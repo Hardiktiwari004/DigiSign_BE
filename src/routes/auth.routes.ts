@@ -37,6 +37,7 @@ const router = Router();
  *               name: { type: 'string' }
  *               email: { type: 'string', format: 'email' }
  *               password: { type: 'string', minLength: 8 }
+ *               role: { type: 'string', enum: ['USER', 'ADMIN'] }
  *     responses:
  *       201:
  *         description: Account created successfully

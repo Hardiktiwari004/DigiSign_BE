@@ -49,6 +49,22 @@ export const documentController = {
   },
 
   /**
+   * GET /api/documents/admin/all
+   * Returns a paginated list of all documents in the system (admin only).
+   */
+  getAllDocuments: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const query = req.query as unknown as GetDocumentsQuery;
+
+      const result = await documentService.getAllDocuments(query);
+
+      sendSuccess(res, 'All documents retrieved successfully', result);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
    * GET /api/documents/:id
    * Returns a single document — only accessible by the owner or an ADMIN.
    */

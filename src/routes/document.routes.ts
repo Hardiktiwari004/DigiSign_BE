@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { documentController } from '../controllers/document.controller';
 import { authenticate } from '../middleware/auth.middleware';
+import { requireRole } from '../middleware/role.middleware';
+import { UserRole } from '../constants/userRoles';
 import { validate } from '../middleware/validate.middleware';
 import { upload } from '../middleware/upload.middleware';
 import {
@@ -76,6 +78,42 @@ router.post('/upload', upload.single('pdf'), documentController.uploadDocument);
  *         $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/', validate(getDocumentsQuerySchema, 'query'), documentController.getUserDocuments);
+
+/**
+ * @openapi
+ * /api/documents/admin/all:
+ *   get:
+ *     summary: Get all documents across the platform (admin only)
+ *     tags: [Documents]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: 'number' }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: 'number' }
+ *       - in: query
+ *         name: search
+ *         schema: { type: 'string' }
+ *       - in: query
+ *         name: status
+ *         schema: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: All documents retrieved successfully
+ *       401:
+ *         $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get(
+  '/admin/all',
+  requireRole(UserRole.ADMIN),
+  validate(getDocumentsQuerySchema, 'query'),
+  documentController.getAllDocuments
+);
 
 /**
  * @openapi
