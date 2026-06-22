@@ -15,6 +15,7 @@ export const uploadPdfToCloudinary = (fileBuffer: Buffer): Promise<string> => {
         folder: 'digital_signatures/documents',
         resource_type: 'raw', // PDFs must be uploaded as raw or image depending on use case. 'raw' ensures it is kept exactly as is.
         public_id: `doc_${uuidv4()}`,
+        type: 'authenticated',
       },
       (error, result) => {
         if (error || !result) {

@@ -40,3 +40,37 @@ export const upload = multer({
     files: 1, // Only one file per request
   },
 });
+
+/**
+ * Multer file filter — accepts PNG, JPG, and JPEG files for signatures.
+ */
+const signatureFileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+): void => {
+  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(
+      Object.assign(new Error('Only PNG, JPG, and JPEG files are allowed. Received: ' + file.mimetype), {
+        statusCode: 400,
+      })
+    );
+  }
+};
+
+/**
+ * Multer upload configuration for signature images.
+ * Uses memoryStorage, with a 5MB size limit.
+ */
+export const uploadSignature = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: signatureFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+    files: 1,
+  },
+});
+

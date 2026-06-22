@@ -58,7 +58,7 @@ export const signatureService = {
 
     // 2. Upload the raw signature image to Cloudinary (for record keeping)
     const signatureImageUrl = await uploadImageToCloudinary(dto.signatureImageBase64);
-
+    
     // 3. Delegate to pdfService to embed the signature and footer
     const signedPdfBuffer = await pdfService.signPdf({
       originalPdfUrl: document.originalPdfUrl,

@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validate.middleware';
 import { documentIdParamSchema } from '../validators/document.validator';
 import { signDocumentSchema } from '../validators/signature.validator';
+import { uploadSignature } from '../middleware/upload.middleware';
 
 const router = Router();
 
@@ -30,17 +31,17 @@ const router = Router();
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
- *             required: [page, x, y, width, height, signatureImageBase64]
+ *             required: [x, y, width, height, signatureImage]
  *             properties:
- *               page: { type: 'number' }
- *               x: { type: 'number' }
- *               y: { type: 'number' }
- *               width: { type: 'number' }
- *               height: { type: 'number' }
- *               signatureImageBase64: { type: 'string' }
+ *               page: { type: 'integer', default: 1, description: 'Page number (1-indexed)' }
+ *               x: { type: 'number', description: 'X coordinate' }
+ *               y: { type: 'number', description: 'Y coordinate' }
+ *               width: { type: 'number', description: 'Width of signature' }
+ *               height: { type: 'number', description: 'Height of signature' }
+ *               signatureImage: { type: 'string', format: 'binary', description: 'PNG/JPG/JPEG signature image file' }
  *     responses:
  *       201:
  *         description: Document signed successfully
@@ -56,6 +57,7 @@ const router = Router();
 router.post(
   '/:id/sign',
   authenticate,
+  uploadSignature.single('signatureImage'),
   validate(documentIdParamSchema, 'params'),
   validate(signDocumentSchema, 'body'),
   signatureController.signDocument

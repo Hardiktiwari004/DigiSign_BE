@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { signatureService } from '../services/signature.service';
-import { sendSuccess } from '../utils/apiResponse.util';
+import { sendSuccess, sendError } from '../utils/apiResponse.util';
 import { SignDocumentDto } from '../validators/signature.validator';
 
 /**
@@ -22,7 +22,20 @@ export const signatureController = {
     try {
       const { id: documentId } = req.params;
       const userId = req.user!.id;
-      const dto = req.body as SignDocumentDto;
+
+      if (!req.file) {
+        sendError(res, 'Signature image file is required.', ['signatureImage: File is missing'], 400);
+        return;
+      }
+
+      // Convert uploaded file to base64 Data URI
+      const signatureImageBase64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+      const dto = {
+        ...req.body,
+        signatureImageBase64,
+      } as SignDocumentDto;
+
       const ctx = { ipAddress: req.ip, userAgent: req.headers['user-agent'] };
 
       const signature = await signatureService.signDocument(documentId, userId, dto, ctx);
