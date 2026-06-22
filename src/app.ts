@@ -42,8 +42,33 @@ app.use('/api', generalLimiter);
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 /**
- * Health check endpoint for load balancers and monitoring tools.
- * No authentication required.
+ * @openapi
+ * /health:
+ *   get:
+ *     summary: Get API server health status
+ *     description: Returns the health status of the application, environment, and system timestamp.
+ *     tags:
+ *       - System
+ *     responses:
+ *       200:
+ *         description: Server is running and healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Server is running
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 environment:
+ *                   type: string
+ *                   example: development
  */
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({

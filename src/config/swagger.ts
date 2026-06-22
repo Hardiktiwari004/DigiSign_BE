@@ -14,6 +14,14 @@ const swaggerDefinition = {
       description: 'Development server',
     },
   ],
+  tags: [
+    { name: 'System', description: 'System health and monitoring' },
+    { name: 'Auth', description: 'User registration, login, and session management' },
+    { name: 'Documents', description: 'Document upload, listing, and management' },
+    { name: 'Signatures', description: 'PDF signing and signature image management' },
+    { name: 'Verification', description: 'Public verification of signed documents' },
+    { name: 'Admin', description: 'Administrative settings and audit logs' },
+  ],
   components: {
     securitySchemes: {
       BearerAuth: {
@@ -42,7 +50,7 @@ const swaggerDefinition = {
 const options = {
   swaggerDefinition,
   // Paths to files containing OpenAPI definitions
-  apis: ['./src/routes/*.ts'],
+  apis: [ './src/app.ts','./src/routes/*.ts'],
 };
 
 export const swaggerSpec = swaggerJSDoc(options);
