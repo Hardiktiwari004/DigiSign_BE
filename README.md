@@ -126,7 +126,7 @@ The application is built to be easily containerizable or deployed to PaaS provid
 ## Future Improvements
 
 *   **Email Notifications**: Integrate a service (e.g., SendGrid, AWS SES) to send emails when a document is shared or requires a signature.
-*   **OAuth2 Integration**: Allow users to sign up and log in using third-party providers like Google or GitHub.
+*   **OAuth2 Integration**: Allow users to sign up and log in using third-party providers like Google or GitHub. 
 *   **WebSocket Integration**: Implement real-time updates for document status changes (e.g., notifying a user immediately when their document is signed).
 *   **Advanced Signature Placement**: Allow users to drag-and-drop or specify exact X/Y coordinates for visual signature placement on the PDF.
 *   **Two-Factor Authentication (2FA)**: Enhance security by adding a second layer of authentication during login or before signing a document.
