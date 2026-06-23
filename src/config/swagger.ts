@@ -19,6 +19,7 @@ const swaggerDefinition = {
     { name: 'Auth', description: 'User registration, login, and session management' },
     { name: 'Documents', description: 'Document upload, listing, and management' },
     { name: 'Signatures', description: 'PDF signing and signature image management' },
+    { name: 'Reusable Signatures', description: 'Saved signature assets that can be reused' },
     { name: 'Verification', description: 'Public verification of signed documents' },
     { name: 'Admin', description: 'Administrative settings and audit logs' },
   ],

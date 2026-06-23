@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 
 export interface SignPdfParams {
   originalPdfUrl: string;
-  signatureImageBase64: string;
+  signatureImageSource: string;
   page: number; // 1-indexed
   x: number;
   y: number;
@@ -37,23 +37,11 @@ export const pdfService = {
       // 2. Load the PDF into pdf-lib
       const pdfDoc = await PDFDocument.load(pdfBytes);
 
-      // 3. Process the base64 signature image
-      // Determine if it's PNG or JPG based on the data URI prefix
-      const isPng = params.signatureImageBase64.startsWith('data:image/png');
-      const isJpg =
-        params.signatureImageBase64.startsWith('data:image/jpeg') ||
-        params.signatureImageBase64.startsWith('data:image/jpg');
-
-      if (!isPng && !isJpg) {
-        throw new Error('Unsupported signature image format. Must be PNG or JPG.');
-      }
-
-      // Strip the data URI prefix (e.g., "data:image/png;base64,") to get raw base64
-      const base64Data = params.signatureImageBase64.replace(/^data:image\/\w+;base64,/, '');
-      const imageBytes = Buffer.from(base64Data, 'base64');
+      // 3. Process the signature image.
+      const { bytes: imageBytes, kind: imageKind } = await pdfService.loadSignatureImage(params.signatureImageSource);
 
       let signatureImage;
-      if (isPng) {
+      if (imageKind === 'png') {
         signatureImage = await pdfDoc.embedPng(imageBytes);
       } else {
         signatureImage = await pdfDoc.embedJpg(imageBytes);
@@ -106,5 +94,65 @@ export const pdfService = {
       err.statusCode = 500;
       throw err;
     }
+  },
+
+  /**
+   * Loads a signature image from either a data URI or a remote URL and returns
+   * both the bytes and detected format.
+   */
+  loadSignatureImage: async (signatureImageSource: string): Promise<{ bytes: Buffer; kind: 'png' | 'jpg' }> => {
+    if (signatureImageSource.startsWith('data:')) {
+      const isPng = signatureImageSource.startsWith('data:image/png');
+      const isJpg =
+        signatureImageSource.startsWith('data:image/jpeg') ||
+        signatureImageSource.startsWith('data:image/jpg');
+
+      if (!isPng && !isJpg) {
+        throw new Error('Unsupported signature image format. Must be PNG or JPG.');
+      }
+
+      const base64Data = signatureImageSource.replace(/^data:image\/\w+;base64,/, '');
+      const bytes = Buffer.from(base64Data, 'base64');
+
+      return {
+        bytes,
+        kind: isPng ? 'png' : 'jpg',
+      };
+    }
+
+    const response = await fetch(signatureImageSource);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch signature image: ${response.statusText}`);
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    const bytes = Buffer.from(await response.arrayBuffer());
+
+    if (contentType.includes('png')) {
+      return { bytes, kind: 'png' };
+    }
+
+    if (contentType.includes('jpeg') || contentType.includes('jpg')) {
+      return { bytes, kind: 'jpg' };
+    }
+
+    const lowerSource = signatureImageSource.toLowerCase();
+    if (lowerSource.endsWith('.png')) {
+      return { bytes, kind: 'png' };
+    }
+
+    if (lowerSource.endsWith('.jpg') || lowerSource.endsWith('.jpeg')) {
+      return { bytes, kind: 'jpg' };
+    }
+
+    if (bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a') {
+      return { bytes, kind: 'png' };
+    }
+
+    if (bytes.subarray(0, 2).toString('hex') === 'ffd8') {
+      return { bytes, kind: 'jpg' };
+    }
+
+    throw new Error('Unsupported signature image format. Must be PNG or JPG.');
   },
 };

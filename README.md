@@ -9,6 +9,7 @@ The **Digital Signature & Document Management Platform API** is a production-gra
 *   **User Authentication & Authorization**: Secure registration, login, and token-based authentication using JWT (Access & Refresh tokens). Passwords are cryptographically hashed using bcrypt.
 *   **Document Management**: Users can upload PDF documents securely, retrieve their own documents, list them with filters, and track their processing status.
 *   **Digital Signatures**: Add cryptographic/metadata signatures or visual signatures to PDF files using `pdf-lib`. Supports managing document signatories.
+*   **Reusable Signatures**: Save a signature image once and reuse it across multiple documents without re-uploading the file.
 *   **Signature Verification**: A dedicated verification endpoint to validate the authenticity of previously signed documents.
 *   **Admin Panel / Capabilities**: Admin-only routes to retrieve all documents across the system for monitoring and compliance.
 *   **Audit Logging**: Actions within the system (e.g., document upload, signing) are logged for auditing and traceability.
@@ -94,11 +95,14 @@ The API is prefixed with `/api`. Below are the primary route groupings:
 *   **Auth (`/api/auth`)**: Endpoints for user registration, login, logout, retrieving current user (`/me`), and refreshing JWT tokens.
 *   **Documents (`/api/documents`)**: Endpoints for uploading, retrieving, and listing documents.
 *   **Signatures (`/api/documents/:id/sign`)**: Endpoints dedicated to the digital signing of a specific document.
+*   **Reusable Signatures (`/api/signatures/reusable`)**: Endpoints for saving, listing, and deleting reusable signature assets.
 *   **Verification (`/api/verify`)**: Endpoint(s) to verify the integrity and signature authenticity of a document.
 *   **Admin (`/api/admin`)**: Restricted endpoints for administrators to view system-wide data (e.g., retrieving all documents).
 *   **Health Check (`/health`)**: Public endpoint to check server health status.
 
 > **API Documentation**: Detailed interactive documentation is available via Swagger UI. Start the server and navigate to `/api-docs` (e.g., `http://localhost:5000/api-docs`).
+
+> **Frontend Guide**: See [docs/frontend-reusable-signatures.md](docs/frontend-reusable-signatures.md) for implementation notes, request examples, and UI flow suggestions.
 
 ## Deployment Information
 

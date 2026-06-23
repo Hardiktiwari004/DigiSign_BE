@@ -23,6 +23,12 @@ const signatureSchema = new Schema<ISignature>(
       required: true,
       index: true,
     },
+    reusableSignatureId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ReusableSignature',
+      default: null,
+      index: true,
+    },
     /** Page number (1-indexed) where the signature is placed */
     page: {
       type: Number,

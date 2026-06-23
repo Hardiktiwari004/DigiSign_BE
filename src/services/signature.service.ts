@@ -1,5 +1,6 @@
 import { Document } from '../models/Document.model';
 import { Signature } from '../models/Signature.model';
+import { ReusableSignature } from '../models/ReusableSignature.model';
 import { User } from '../models/User.model';
 import { ISignature } from '../interfaces/ISignature';
 import { pdfService } from './pdf.service';
@@ -8,6 +9,7 @@ import { auditService } from './audit.service';
 import { AuditAction } from '../constants/auditActions';
 import { DocumentStatus } from '../constants/documentStatus';
 import { SignDocumentDto } from '../validators/signature.validator';
+import { UserRole } from '../constants/userRoles';
 
 interface AuditContext {
   ipAddress?: string;
@@ -48,7 +50,7 @@ export const signatureService = {
       throw err;
     }
 
-    if (document.ownerId.toString() !== userId && user.role !== 'ADMIN') {
+    if (document.ownerId.toString() !== userId && user.role !== UserRole.ADMIN) {
       const err = new Error('You do not have permission to sign this document') as Error & { statusCode: number };
       err.statusCode = 403;
       throw err;
@@ -60,18 +62,60 @@ export const signatureService = {
       throw err;
     }
 
-    // 2. Upload the raw signature image to Cloudinary (for record keeping)
-    const signatureImageUrl = await uploadImageToCloudinary(dto.signatureImageBase64);
-    
+    let signatureImageUrl: string;
+    let reusableSignatureId: string | null = null;
+    let width = dto.width;
+    let height = dto.height;
+
+    // 2. Use either an uploaded signature image or a reusable signature asset.
+    if (dto.reusableSignatureId) {
+      const reusableSignature = await ReusableSignature.findById(dto.reusableSignatureId);
+
+      if (!reusableSignature) {
+        const err = new Error('Reusable signature not found') as Error & { statusCode: number };
+        err.statusCode = 404;
+        throw err;
+      }
+
+      if (reusableSignature.userId.toString() !== userId && user.role !== UserRole.ADMIN) {
+        const err = new Error('You do not have permission to use this reusable signature') as Error & {
+          statusCode: number;
+        };
+        err.statusCode = 403;
+        throw err;
+      }
+
+      reusableSignatureId = reusableSignature._id.toString();
+      signatureImageUrl = reusableSignature.signatureImageUrl;
+      width ??= reusableSignature.defaultWidth;
+      height ??= reusableSignature.defaultHeight;
+
+      if (width === undefined || height === undefined) {
+        const err = new Error('Width and height are required to use this reusable signature') as Error & {
+          statusCode: number;
+        };
+        err.statusCode = 400;
+        throw err;
+      }
+    } else {
+      if (!dto.signatureImageBase64) {
+        const err = new Error('Signature image file is required') as Error & { statusCode: number };
+        err.statusCode = 400;
+        throw err;
+      }
+
+      signatureImageUrl = await uploadImageToCloudinary(dto.signatureImageBase64);
+    }
+
     // 3. Delegate to pdfService to embed the signature and footer
     const signedPdfBuffer = await pdfService.signPdf({
       originalPdfUrl: document.originalPdfUrl,
-      signatureImageBase64: dto.signatureImageBase64,
+      signatureImageSource: dto.reusableSignatureId ? signatureImageUrl : dto.signatureImageBase64!,
       page: dto.page,
       x: dto.x,
       y: dto.y,
-      width: dto.width,
-      height: dto.height,
+      width: width as number,
+      height: height as number,
       verificationCode: document.verificationCode,
       signerName: user.name,
     });
@@ -83,11 +127,12 @@ export const signatureService = {
     const signature = await Signature.create({
       documentId: document._id,
       userId,
+      reusableSignatureId: reusableSignatureId ? reusableSignatureId : null,
       page: dto.page,
       x: dto.x,
       y: dto.y,
-      width: dto.width,
-      height: dto.height,
+      width: width as number,
+      height: height as number,
       signatureImageUrl,
     });
 
@@ -106,6 +151,7 @@ export const signatureService = {
         title: document.title,
         verificationCode: document.verificationCode,
         page: dto.page,
+        reusableSignatureId,
       },
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,

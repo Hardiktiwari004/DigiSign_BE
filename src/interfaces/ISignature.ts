@@ -9,6 +9,8 @@ export interface ISignature extends Document {
   documentId: Types.ObjectId;
   /** Reference to the User who performed the signing */
   userId: Types.ObjectId;
+  /** Optional reference to a reusable signature asset */
+  reusableSignatureId?: Types.ObjectId | null;
   /** Page number (1-indexed) where the signature was placed */
   page: number;
   /** X coordinate of the signature placement on the page */

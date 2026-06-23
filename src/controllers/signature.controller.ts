@@ -23,13 +23,22 @@ export const signatureController = {
       const { id: documentId } = req.params;
       const userId = req.user!.id;
 
-      if (!req.file) {
-        sendError(res, 'Signature image file is required.', ['signatureImage: File is missing'], 400);
+      const reusableSignatureId = req.body?.reusableSignatureId;
+
+      if (!req.file && !reusableSignatureId) {
+        sendError(
+          res,
+          'A signature image file or reusableSignatureId is required.',
+          ['signatureImage: File is missing', 'reusableSignatureId: Value is missing'],
+          400
+        );
         return;
       }
 
-      // Convert uploaded file to base64 Data URI
-      const signatureImageBase64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+      // Convert uploaded file to base64 Data URI when the request uses a fresh signature upload.
+      const signatureImageBase64 = req.file
+        ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
+        : undefined;
 
       const dto = {
         ...req.body,

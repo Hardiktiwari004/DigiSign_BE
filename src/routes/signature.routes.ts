@@ -34,14 +34,15 @@ const router = Router();
  *         multipart/form-data:
  *           schema:
  *             type: object
- *             required: [x, y, width, height, signatureImage]
+ *             required: [x, y]
  *             properties:
  *               page: { type: 'integer', default: 1, description: 'Page number (1-indexed)' }
  *               x: { type: 'number', description: 'X coordinate' }
  *               y: { type: 'number', description: 'Y coordinate' }
- *               width: { type: 'number', description: 'Width of signature' }
- *               height: { type: 'number', description: 'Height of signature' }
- *               signatureImage: { type: 'string', format: 'binary', description: 'PNG/JPG/JPEG signature image file' }
+ *               width: { type: 'number', description: 'Width of signature. Required unless reusableSignatureId is provided.' }
+ *               height: { type: 'number', description: 'Height of signature. Required unless reusableSignatureId is provided.' }
+ *               reusableSignatureId: { type: 'string', description: 'ID of a previously saved reusable signature' }
+ *               signatureImage: { type: 'string', format: 'binary', description: 'PNG/JPG/JPEG signature image file. Required when reusableSignatureId is not provided.' }
  *     responses:
  *       201:
  *         description: Document signed successfully

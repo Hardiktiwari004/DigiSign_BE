@@ -2,6 +2,7 @@ import { Router } from 'express';
 import authRoutes from './auth.routes';
 import documentRoutes from './document.routes';
 import signatureRoutes from './signature.routes';
+import reusableSignatureRoutes from './reusableSignature.routes';
 import verificationRoutes from './verification.routes';
 import adminRoutes from './admin.routes';
 
@@ -14,6 +15,7 @@ const router = Router();
 router.use('/auth', authRoutes);
 router.use('/documents', documentRoutes);
 router.use('/documents', signatureRoutes);   // Shares /documents prefix for POST /:id/sign
+router.use('/signatures', reusableSignatureRoutes);
 router.use('/verify', verificationRoutes);
 router.use('/admin', adminRoutes);
 
